@@ -1,0 +1,46 @@
+{
+  "_comment": "Example of one fully processed record as stored across Supabase tables.",
+  "research_records": {
+    "id": "8f1c2e4a-9b3d-4f6a-bc11-2a7e9d0c5f83",
+    "source_id": "1d2c3b4a-0000-1111-2222-333344445555",
+    "topic_id": "aa11bb22-cc33-dd44-ee55-ff6677889900",
+    "title": "Short-course radiotherapy versus standard care in early-stage breast cancer: a randomized controlled trial",
+    "title_normalized": "short course radiotherapy versus standard care in early stage breast cancer a randomized controlled trial",
+    "url": "https://www.biorxiv.org/content/10.1101/2024.05.01.123456v1",
+    "doi": "10.1101/2024.05.01.123456",
+    "authors": ["Jane A. Smith", "Wei Chen", "Maria Gomez", "Anand Patel"],
+    "publication_date": "2024-05-01",
+    "abstract": "Background: Short-course radiotherapy may reduce treatment burden... Methods: 412 patients were randomized... Results: Non-inferior local control was observed... Conclusion: Short-course schedules are a viable option.",
+    "summary": "A randomized trial of 412 early-stage breast cancer patients found that a shorter radiotherapy schedule was non-inferior to standard care for local tumor control, while reducing patient treatment time. Side-effect profiles were comparable between groups.",
+    "study_type": "randomized controlled trial",
+    "sample_size": 412,
+    "key_findings": [
+      "Short-course radiotherapy was non-inferior for 3-year local control (94.1% vs 94.8%).",
+      "Grade 3+ skin toxicity was lower in the short-course arm (6% vs 11%).",
+      "Patient-reported convenience scores improved significantly."
+    ],
+    "pdf_links": [
+      "https://www.biorxiv.org/content/10.1101/2024.05.01.123456v1.full.pdf"
+    ],
+    "source_website": "www.biorxiv.org",
+    "retrieved_at": "2026-06-18T03:01:22.481Z",
+    "extraction_engine": "ollama",
+    "created_at": "2026-06-18T03:01:22.481Z"
+  },
+  "extracted_tables": [
+    {
+      "id": "tbl-0001",
+      "record_id": "8f1c2e4a-9b3d-4f6a-bc11-2a7e9d0c5f83",
+      "table_index": 0,
+      "caption": "Table 1. Baseline characteristics by treatment arm",
+      "data": {
+        "headers": ["Characteristic", "Short-course (n=206)", "Standard (n=206)"],
+        "rows": [
+          ["Median age (years)", "58", "59"],
+          ["Stage I (%)", "61", "63"],
+          ["ER-positive (%)", "78", "75"]
+        ]
+      }
+    }
+  ]
+}

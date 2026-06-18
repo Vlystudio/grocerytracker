@@ -1,0 +1,32 @@
+# Version FLOORS (>=) rather than exact pins, so pip can pick wheels that match
+# your Python version. If you're on a brand-new Python (e.g. 3.14) this avoids
+# source-build failures for C-extension packages (lxml, rapidfuzz).
+# Tested target: Python 3.12 or 3.13. Also works on 3.14 with current releases.
+
+# ---- Core ----
+python-dotenv>=1.0.1        # load .env files
+truststore>=0.10            # use the OS cert store (works behind HTTPS-inspecting AV/proxies)
+pydantic>=2.9               # validate AI/JSON output into typed records
+supabase>=2.9               # Supabase Postgres client (service-role on the agent)
+PyYAML>=6.0.2               # read example sites.yaml config
+
+# ---- Scraping / parsing ----
+Scrapy>=2.12                # static crawling
+playwright>=1.48            # JavaScript-rendered pages (run `playwright install`)
+beautifulsoup4>=4.12        # HTML parsing
+lxml>=5.3                   # fast parser backend for BeautifulSoup
+requests>=2.32             # lightweight HTTP (Ollama calls, health checks)
+
+# ---- Dedup ----
+rapidfuzz>=3.10            # fuzzy title matching
+
+# ---- Scheduling ----
+schedule>=1.2             # simple daily scheduler + manual-run polling
+
+# ---- Optional AI API fallbacks (only needed if you use them) ----
+openai>=1.54              # OpenAI fallback
+anthropic>=0.39           # Claude fallback
+
+# ---- CLI niceties ----
+typer>=0.12               # clean CLI commands
+rich>=13.9                # readable console logging

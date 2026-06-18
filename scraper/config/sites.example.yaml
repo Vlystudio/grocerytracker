@@ -1,0 +1,37 @@
+# =============================================================================
+# Example site whitelist (documentation + optional bootstrap).
+#
+# In normal operation the agent reads its source list from the Supabase
+# `research_sources` table (managed via the admin dashboard). This file shows
+# the exact shape of a per-site config and can be loaded with:
+#
+#     python -m agent.main seed-sources --file config/sites.example.yaml
+#
+# ...which upserts these entries into Supabase so you have something to crawl.
+# =============================================================================
+
+sources:
+  - name: "PLOS ONE (recent articles)"
+    base_url: "https://journals.plos.org/plosone/"
+    allowed_domains: ["journals.plos.org"]
+    search_keywords: []       # empty = keep every article page; add terms to narrow
+    crawl_depth: 1            # 0 = only the base_url page; 1 = also its links; etc.
+    rate_limit: 2.0           # seconds to wait between requests (politeness)
+    max_pages: 25             # hard cap on pages fetched per run
+    engine: "scrapy"          # "scrapy" for static HTML, "playwright" for JS pages
+    enabled: true
+    notes: "Open-access; robots.txt permits article pages; rich citation metadata."
+
+  # NOTE: avoid sites whose robots.txt disallows the path you start from
+  # (e.g. bioRxiv/medRxiv block /search/). The agent honors robots.txt.
+
+  - name: "Example JS journal"
+    base_url: "https://example.com/articles"
+    allowed_domains: ["example.com"]
+    search_keywords: ["randomized", "cohort", "trial"]
+    crawl_depth: 1
+    rate_limit: 3.0
+    max_pages: 20
+    engine: "playwright"      # use Playwright when content is rendered by JS
+    enabled: false            # disabled until you point it at a real site
+    notes: "Template for a JavaScript-heavy site."
