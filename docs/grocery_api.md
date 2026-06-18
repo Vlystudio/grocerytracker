@@ -48,7 +48,7 @@ GET /api/deals?q=milk&limit=1
 
 JavaScript (browser or Node):
 ```js
-const base = "https://YOUR-DASHBOARD-HOST";      // e.g. http://localhost:3001 in dev
+const base = "https://grocerytracker-blond.vercel.app";      // e.g. http://localhost:3001 in dev
 const res = await fetch(`${base}/api/deals?q=eggs&limit=5`);
 const { deals } = await res.json();
 deals.forEach(d => console.log(d.store, d.product, "$" + d.price));
@@ -57,14 +57,14 @@ deals.forEach(d => console.log(d.store, d.product, "$" + d.price));
 Python:
 ```python
 import requests
-r = requests.get("https://YOUR-DASHBOARD-HOST/api/deals", params={"q": "coffee", "store": "Hannaford"})
+r = requests.get("https://grocerytracker-blond.vercel.app/api/deals", params={"q": "coffee", "store": "Hannaford"})
 for d in r.json()["deals"]:
     print(d["store"], d["product"], d["price"])
 ```
 
 PHP (e.g. WordPress):
 ```php
-$json = file_get_contents("https://YOUR-DASHBOARD-HOST/api/deals?q=" . urlencode("chicken"));
+$json = file_get_contents("https://grocerytracker-blond.vercel.app/api/deals?q=" . urlencode("chicken"));
 $deals = json_decode($json, true)["deals"];
 ```
 
