@@ -13,10 +13,13 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 // Stateless anon client — read-only, public data. No service-role key here.
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Created per-request (lazy) so a missing env var can't crash the build.
+function getClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -39,6 +42,7 @@ export async function GET(req: NextRequest) {
   const includeUnpriced = sp.get("include_unpriced") === "true";
   const limit = Math.min(Math.max(Number(sp.get("limit")) || 50, 1), 200);
 
+  const supabase = getClient();
   let query = supabase
     .from("grocery_deals")
     .select(

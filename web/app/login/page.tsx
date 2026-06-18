@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 // Admin sign-in. Uses Supabase email/password auth (anon key, client-side).
 // Create the admin user in the Supabase dashboard: Authentication → Users.
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const redirectTo = params.get("redirect") || "/admin";
@@ -65,5 +65,14 @@ export default function LoginPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+// useSearchParams() must be inside a Suspense boundary for the production build.
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-sm">Loading…</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
