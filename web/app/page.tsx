@@ -1,13 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import FilterBar from "@/components/FilterBar";
-import RecordCard from "@/components/RecordCard";
-import type { ResearchRecord, ResearchTopic } from "@/lib/types";
+import DealCard from "@/components/DealCard";
+import type { GroceryDeal } from "@/lib/types";
 
-// The public browse/search page. Reads directly from Supabase via the anon key
-// (RLS allows public SELECT on research_records). Filters come from the URL.
+// Home page = the grocery-deals browser. Reads grocery_deals via the anon key
+// (RLS allows public SELECT). Filters/sort come from the URL query string.
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 120;
 
 export default async function HomePage({
   searchParams,
@@ -17,70 +16,87 @@ export default async function HomePage({
   const sp = await searchParams;
   const supabase = await createClient();
 
-  // ---- Build the filtered record query ----
-  let query = supabase
-    .from("research_records")
-    .select("*")
-    .order("publication_date", { ascending: false, nullsFirst: false })
-    .order("retrieved_at", { ascending: false })
-    .limit(PAGE_SIZE);
+  const sort = sp.sort ?? "price_asc";
+  const showAll = sp.show === "all";
 
-  if (sp.q) {
-    // Match the term in title, abstract or summary.
-    const term = sp.q.replace(/[%,]/g, " ");
-    query = query.or(
-      `title.ilike.%${term}%,abstract.ilike.%${term}%,summary.ilike.%${term}%`
-    );
-  }
-  if (sp.website) query = query.eq("source_website", sp.website);
-  if (sp.topic) query = query.eq("topic_id", sp.topic);
-  if (sp.study_type) query = query.eq("study_type", sp.study_type);
-  if (sp.from) query = query.gte("publication_date", sp.from);
-  if (sp.to) query = query.lte("publication_date", sp.to);
+  let query = supabase.from("grocery_deals").select("*").limit(PAGE_SIZE);
 
-  // Run the record query + the dropdown lookups in parallel.
-  const [{ data: records }, { data: topics }, { data: websites }, { data: types }] =
-    await Promise.all([
-      query,
-      supabase.from("research_topics").select("*").order("name"),
-      supabase.from("v_record_websites").select("source_website"),
-      supabase
-        .from("research_records")
-        .select("study_type")
-        .not("study_type", "is", null),
-    ]);
+  if (!showAll) query = query.gte("valid_to", new Date().toISOString());
+  if (sp.store) query = query.eq("store", sp.store);
+  if (sp.q) query = query.ilike("product_name", `%${sp.q.replace(/[%,]/g, " ")}%`);
 
-  // Distinct, sorted study types for the dropdown.
-  const studyTypes = Array.from(
-    new Set((types ?? []).map((t: { study_type: string }) => t.study_type))
-  ).sort();
+  if (sort === "price_asc")
+    query = query.order("price", { ascending: true, nullsFirst: false });
+  else if (sort === "price_desc")
+    query = query.order("price", { ascending: false, nullsFirst: false });
+  else query = query.order("retrieved_at", { ascending: false });
+
+  const [{ data: deals }, { data: stores }] = await Promise.all([
+    query,
+    supabase.from("v_deal_stores").select("store, deal_count"),
+  ]);
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">Research records</h1>
-
-      <FilterBar
-        topics={(topics as ResearchTopic[]) ?? []}
-        websites={(websites ?? []).map((w: { source_website: string }) => w.source_website)}
-        studyTypes={studyTypes}
-        current={sp as Record<string, string>}
-      />
-
-      <p className="mb-3 text-sm text-slate-500">
-        {records?.length ?? 0} result{records?.length === 1 ? "" : "s"}
-        {records?.length === PAGE_SIZE ? " (showing first 50)" : ""}
+      <h1 className="mb-1 text-2xl font-bold">Grocery deals</h1>
+      <p className="mb-4 text-sm text-slate-500">
+        This week&apos;s flyer deals across your Maine stores, refreshed by the local agent.
       </p>
 
-      <div className="grid gap-4">
-        {(records as ResearchRecord[] | null)?.map((r) => (
-          <RecordCard key={r.id} record={r} />
+      {/* Filters (server-rendered GET form) */}
+      <form method="get" className="card mb-6 grid gap-3 md:grid-cols-12">
+        <div className="md:col-span-5">
+          <label className="label" htmlFor="q">Search product</label>
+          <input id="q" name="q" defaultValue={sp.q ?? ""} placeholder="milk, chicken, coffee…" className="input" />
+        </div>
+        <div className="md:col-span-3">
+          <label className="label" htmlFor="store">Store</label>
+          <select id="store" name="store" defaultValue={sp.store ?? ""} className="input">
+            <option value="">All stores</option>
+            {(stores ?? []).map((s: { store: string; deal_count: number }) => (
+              <option key={s.store} value={s.store}>
+                {s.store} ({s.deal_count})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <label className="label" htmlFor="sort">Sort</label>
+          <select id="sort" name="sort" defaultValue={sort} className="input">
+            <option value="price_asc">Price: low to high</option>
+            <option value="price_desc">Price: high to low</option>
+            <option value="newest">Newest</option>
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <label className="label" htmlFor="show">Show</label>
+          <select id="show" name="show" defaultValue={sp.show ?? "current"} className="input">
+            <option value="current">Current only</option>
+            <option value="all">Include expired</option>
+          </select>
+        </div>
+        <div className="flex items-end gap-2 md:col-span-12">
+          <button type="submit" className="btn">Apply</button>
+          <a href="/" className="btn-secondary">Reset</a>
+        </div>
+      </form>
+
+      <p className="mb-3 text-sm text-slate-500">
+        {deals?.length ?? 0} deal{deals?.length === 1 ? "" : "s"}
+        {deals?.length === PAGE_SIZE ? " (showing first 120)" : ""}
+      </p>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {(deals as GroceryDeal[] | null)?.map((d) => (
+          <DealCard key={d.id} deal={d} />
         ))}
-        {(!records || records.length === 0) && (
-          <p className="text-slate-500">
-            No records match your filters yet. Run the local agent to populate data.
-          </p>
-        )}
       </div>
+
+      {(!deals || deals.length === 0) && (
+        <p className="text-slate-500">
+          No deals yet. Run the collector: <code>python -m agent.main grocery-run</code>
+        </p>
+      )}
     </div>
   );
 }

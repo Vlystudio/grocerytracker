@@ -17,15 +17,12 @@ export default function RootLayout({
       <body>
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <Link href="/deals" className="text-lg font-semibold">
+            <Link href="/" className="text-lg font-semibold">
               🛒 Grocery Deals
             </Link>
             <nav className="flex gap-4 text-sm">
-              <Link href="/deals" className="hover:underline">
-                Deals
-              </Link>
               <Link href="/" className="hover:underline">
-                Research
+                Deals
               </Link>
               <Link href="/admin" className="hover:underline">
                 Admin
