@@ -47,9 +47,16 @@ The `schedule` command refreshes deals **daily** and runs admin-queued
 python scripts/init_db.py --file grocery_schema.sql --file grocery_seed.sql
 ```
 
-**Store coverage notes (Flipp):** Hannaford, Shaw's, Walmart, Costco, Market
-Basket, and Aldi are covered. **Trader Joe's is not** — it isn't on Flipp and
-its own site is Akamai-protected against automation, so it can't be included.
+**Store coverage:**
+- **Flipp** (weekly flyers): Hannaford, Shaw's, Walmart, Costco, Market Basket, Aldi.
+- **Whole Foods**: not on Flipp, but collected from its own public sales API by
+  `agent/collectors/wholefoods.py` (store set via `WFM_STORE_ID`, default 10291 =
+  Portland, ME). Toggle it like any store in `/admin`.
+- **Trader Joe's is not included** — it isn't on Flipp and its own site is
+  Akamai-protected against automation.
+
+Both collectors run together via `run_grocery()` (one `grocery-run` / daily job),
+writing into the same `grocery_deals` table.
 
 The original **research-paper** pipeline below still works (it's just disabled
 by default now); the two share the scheduler, dedup, logging, and dashboard.

@@ -85,15 +85,12 @@ def _normalize(item: dict[str, Any], store: str, merchant_raw: str, postal_code:
     }
 
 
-def collect(
-    db: Database, trigger: str = "manual", run_id: Optional[str] = None
-) -> dict[str, int]:
-    """Pull deals for every enabled location + whitelisted store. Returns stats.
+def collect_into(db: Database, run_id: str) -> dict[str, int]:
+    """Pull Flipp deals for every enabled location + whitelisted store.
 
-    If `run_id` is given (e.g. an admin-queued run the scheduler already claimed),
-    that run row is updated; otherwise a new run is created here.
+    Does NOT create/finish the run (the coordinator in __init__.py does that so
+    Flipp + Whole Foods can share one run). Returns stats.
     """
-    run_id = run_id or db.start_run(source_id=None, trigger=trigger)
     locations = db.get_enabled_locations()
     stores = db.get_enabled_stores()
     existing_ids = db.load_deal_ids()
@@ -161,17 +158,8 @@ def collect(
 
             time.sleep(settings.default_rate_limit)  # politeness
 
-    status = "failed" if (deals_new == 0 and errors > 0) else ("partial" if errors else "success")
-    db.finish_run(
-        run_id,
-        status,
-        pages_crawled=flyers_processed,   # reuse columns: flyers processed
-        records_found=deals_found,         # deals seen
-        records_new=deals_new,             # deals stored
-        errors_count=errors,
-    )
     log.info(
-        "Grocery collect done: %d flyers, %d deals seen, %d new, %d errors",
+        "Flipp collect done: %d flyers, %d deals seen, %d new, %d errors",
         flyers_processed,
         deals_found,
         deals_new,

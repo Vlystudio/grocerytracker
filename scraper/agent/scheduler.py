@@ -14,7 +14,7 @@ import time
 import schedule
 
 from .ai.extractor import AIExtractor
-from .collectors.flipp import collect as collect_grocery
+from .collectors import run_grocery
 from .config import settings
 from .db import Database
 from .logging_conf import get_logger
@@ -30,7 +30,7 @@ def _daily_job(db: Database, ai: AIExtractor) -> None:
     log.info("Scheduled daily run starting…")
     # 1) Grocery deals (the primary job).
     try:
-        collect_grocery(db, trigger="scheduled")
+        run_grocery(db, trigger="scheduled")
     except Exception as e:  # noqa: BLE001 — keep the scheduler alive
         log.exception("Daily grocery collect crashed: %s", e)
     # 2) Research crawl, only if any research sources are still enabled.
@@ -56,7 +56,7 @@ def _drain_queue(db: Database, ai: AIExtractor) -> None:
         log.info("Executing queued %s run %s", kind, run["id"][:8])
         try:
             if is_grocery:
-                collect_grocery(db, run_id=run["id"])
+                run_grocery(db, run_id=run["id"])
             else:
                 execute_run(db, run["id"], run.get("source_id"), ai=ai)
         except Exception as e:  # noqa: BLE001

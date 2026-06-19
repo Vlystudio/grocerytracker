@@ -24,7 +24,11 @@ insert into public.grocery_stores (display_name, match_key) values
     ('Walmart',        'walmart'),
     ('Costco',         'costco'),
     ('Market Basket',  'market basket'),
-    ('Aldi',           'aldi')
+    ('Aldi',           'aldi'),
+    -- Whole Foods is NOT on Flipp; it's collected from its own API by the
+    -- wholefoods.py collector. The unusual match_key never matches a Flipp
+    -- merchant, so toggling this row only controls the Whole Foods collector.
+    ('Whole Foods',    'wholefoods-api')
 on conflict (match_key) do nothing;
 -- NOTE: Trader Joe's is intentionally omitted — it isn't on Flipp and its own
 -- site is Akamai-protected against scraping.

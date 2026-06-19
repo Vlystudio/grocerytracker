@@ -76,6 +76,12 @@ class Settings:
         default_factory=lambda: _get_int("FUZZY_TITLE_THRESHOLD", 90)
     )
 
+    # ---- Whole Foods collector ----
+    # Store id for the Whole Foods products/sales API. 10291 = Portland, ME.
+    # Find another via /api/stores/<id>/summary on wholefoodsmarket.com.
+    wfm_store_id: str = field(default_factory=lambda: _get("WFM_STORE_ID", "10291"))
+    wfm_postal_code: str = field(default_factory=lambda: _get("WFM_POSTAL_CODE", "04101"))
+
     # ---- Logging ----
     log_level: str = field(default_factory=lambda: _get("LOG_LEVEL", "INFO").upper())
     log_dir: str = field(default_factory=lambda: _get("LOG_DIR", "logs"))

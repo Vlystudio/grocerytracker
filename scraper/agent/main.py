@@ -102,14 +102,14 @@ def test_ai() -> None:
 
 @app.command(name="grocery-run")
 def grocery_run() -> None:
-    """Collect grocery weekly-flyer deals (Flipp) for your ZIPs + stores."""
-    from .collectors.flipp import collect
+    """Collect grocery deals (Flipp flyers + Whole Foods) for your ZIPs/stores."""
+    from .collectors import run_grocery
 
     db = Database()
-    stats = collect(db, trigger="manual")
+    stats = run_grocery(db, trigger="manual")
     console.print(
         f"[green]Done.[/] new={stats['new']} found={stats['found']} "
-        f"flyers={stats['flyers']} errors={stats['errors']}"
+        f"sources={stats['flyers']} errors={stats['errors']}"
     )
 
 

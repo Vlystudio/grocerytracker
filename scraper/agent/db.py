@@ -92,20 +92,36 @@ class Database:
         )
 
     def load_deal_ids(self) -> set[int]:
-        """Existing Flipp item ids, so we only insert genuinely new deals."""
-        rows = (
-            self.client.table("grocery_deals")
-            .select("flipp_item_id")
-            .execute()
-            .data
-        )
-        return {r["flipp_item_id"] for r in rows if r.get("flipp_item_id") is not None}
+        """All existing Flipp item ids, paginated past PostgREST's 1000-row cap."""
+        ids: set[int] = set()
+        page, start = 1000, 0
+        while True:
+            rows = (
+                self.client.table("grocery_deals")
+                .select("flipp_item_id")
+                .range(start, start + page - 1)
+                .execute()
+                .data
+            )
+            for r in rows:
+                if r.get("flipp_item_id") is not None:
+                    ids.add(r["flipp_item_id"])
+            if len(rows) < page:
+                break
+            start += page
+        return ids
 
     def insert_deals(self, rows: list[dict[str, Any]]) -> int:
-        """Bulk-insert deals; returns the number inserted."""
+        """Insert deals idempotently. Duplicates (same flipp_item_id) are skipped
+        rather than raising, so a re-run can't error on already-stored items.
+        Returns the number of rows actually inserted."""
         if not rows:
             return 0
-        res = self.client.table("grocery_deals").insert(rows).execute()
+        res = (
+            self.client.table("grocery_deals")
+            .upsert(rows, on_conflict="flipp_item_id", ignore_duplicates=True)
+            .execute()
+        )
         return len(res.data or [])
 
     # ---- Dedup indexes -------------------------------------------------
