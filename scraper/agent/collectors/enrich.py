@@ -81,12 +81,19 @@ _CATEGORY_RULES: list[tuple[str, list[str]]] = [
 # Categories that are NOT food/grocery-store staples (hidden by default).
 _NON_GROCERY = {"Non-grocery"}
 
+# Precompiled WORD-BOUNDARY patterns per category. Anchoring at \b avoids false
+# positives from substrings (e.g. "egg" inside "veggie", "ham" inside "shampoo").
+_CATEGORY_PATTERNS: list[tuple[str, re.Pattern]] = [
+    (cat, re.compile(r"\b(?:" + "|".join(re.escape(k) for k in kws) + r")", re.I))
+    for cat, kws in _CATEGORY_RULES
+]
+
 
 def categorize(name: Optional[str], brand: Optional[str] = None) -> tuple[str, bool]:
     """Return (category, is_grocery). Unmatched items become ('Other', True)."""
-    hay = f"{name or ''} {brand or ''}".lower()
-    for category, keywords in _CATEGORY_RULES:
-        if any(kw in hay for kw in keywords):
+    hay = f"{name or ''} {brand or ''}"
+    for category, pattern in _CATEGORY_PATTERNS:
+        if pattern.search(hay):
             return category, category not in _NON_GROCERY
     return "Other", True
 

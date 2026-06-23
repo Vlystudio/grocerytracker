@@ -10,6 +10,7 @@ Flipp endpoints (public backend used by flipp.com):
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any, Optional
 
@@ -69,6 +70,18 @@ def _to_price(value: Any) -> Optional[float]:
         return None
 
 
+# Flipp's "discount" field is often a bare code (e.g. "14"); keep it only when
+# it reads like an actual deal. The real "Save 80¢" text lives in the image.
+_MEANINGFUL_DISCOUNT = re.compile(r"\$|%|\bfor\b|save|free|buy|off|bogo", re.I)
+
+
+def _clean_discount(v: Any) -> Optional[str]:
+    if not v:
+        return None
+    s = str(v).strip()
+    return s if _MEANINGFUL_DISCOUNT.search(s) else None
+
+
 def _normalize(item: dict[str, Any], store: str, merchant_raw: str, postal_code: str) -> dict[str, Any]:
     name = (item.get("name") or "").strip() or "(unnamed item)"
     brand = item.get("brand") or None
@@ -80,7 +93,7 @@ def _normalize(item: dict[str, Any], store: str, merchant_raw: str, postal_code:
         "product_name": name,
         "brand": brand,
         "price": _to_price(item.get("price")),
-        "discount": (item.get("discount") or None),
+        "discount": _clean_discount(item.get("discount")),
         "category": category,
         "unit": parse_unit(name),
         "is_grocery": is_grocery,
@@ -108,6 +121,7 @@ def collect_into(db: Database, run_id: str) -> dict[str, int]:
     errors = 0
     seen_flyers: set[int] = set()      # a flyer is shared across nearby ZIPs
     new_ids: set[int] = set()           # avoid dupes within this run
+    seen_products: set[tuple] = set()   # collapse the same product across regional flyers
 
     if not stores:
         log.warning("No enabled stores in grocery_stores — nothing to collect.")
@@ -151,8 +165,14 @@ def collect_into(db: Database, run_id: str) -> dict[str, int]:
                 deals_found += 1
                 if iid in existing_ids or iid in new_ids:
                     continue
+                row = _normalize(item, store, flyer.get("merchant", ""), zip_code)
+                # Skip the same product+price already seen in another regional flyer.
+                pkey = (row["store"], row["product_name"].lower(), row["price"])
+                if pkey in seen_products:
+                    continue
+                seen_products.add(pkey)
                 new_ids.add(iid)
-                rows.append(_normalize(item, store, flyer.get("merchant", ""), zip_code))
+                rows.append(row)
 
             try:
                 inserted = db.insert_deals(rows)
