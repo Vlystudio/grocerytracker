@@ -40,6 +40,14 @@ def run_grocery(
         for k in total:
             total[k] += stats.get(k, 0)
 
+    # Keep the table clean automatically: drop long-expired deals.
+    try:
+        removed = db.delete_expired_deals()
+        if removed:
+            log.info("Cleaned up %d expired deal(s)", removed)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Expired-deal cleanup failed: %s", e)
+
     status = (
         "failed"
         if (total["new"] == 0 and total["errors"] > 0)

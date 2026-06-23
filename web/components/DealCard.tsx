@@ -26,6 +26,8 @@ export default function DealCard({ deal }: { deal: GroceryDeal }) {
         {deal.price != null ? (
           <span className="text-lg font-bold text-emerald-700">
             ${deal.price.toFixed(2)}
+            {deal.unit === "lb" && <span className="text-xs font-normal">/lb</span>}
+            {deal.unit === "each" && <span className="text-xs font-normal"> ea</span>}
           </span>
         ) : (
           <span className="text-xs text-slate-400">see flyer</span>
@@ -35,7 +37,14 @@ export default function DealCard({ deal }: { deal: GroceryDeal }) {
       <h3 className="mt-1 line-clamp-2 text-sm font-medium text-slate-900">
         {deal.product_name}
       </h3>
-      {deal.brand && <p className="text-xs text-slate-500">{deal.brand}</p>}
+      <div className="flex items-center gap-2">
+        {deal.brand && <p className="text-xs text-slate-500">{deal.brand}</p>}
+        {deal.category && (
+          <span className="text-[10px] uppercase tracking-wide text-slate-400">
+            {deal.category}
+          </span>
+        )}
+      </div>
       {deal.discount && (
         <p className="mt-1 text-xs font-medium text-rose-600">{deal.discount}</p>
       )}

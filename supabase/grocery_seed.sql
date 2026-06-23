@@ -19,12 +19,18 @@ on conflict (postal_code) do nothing;
 
 -- Store whitelist (match_key is a lowercase substring of Flipp's merchant) -----
 insert into public.grocery_stores (display_name, match_key) values
-    ('Hannaford',      'hannaford'),
-    ('Shaw''s',        'shaw'),
-    ('Walmart',        'walmart'),
-    ('Costco',         'costco'),
-    ('Market Basket',  'market basket'),
-    ('Aldi',           'aldi'),
+    ('Hannaford',                'hannaford'),
+    ('Shaw''s',                  'shaw'),
+    ('Walmart',                  'walmart'),
+    ('Costco',                   'costco'),
+    ('Market Basket',            'market basket'),
+    ('Aldi',                     'aldi'),
+    ('Target',                   'target'),
+    ('Sam''s Club',              'sam'),
+    ('Plummer''s Shop ''n Save', 'plummer'),
+    ('McKinnon''s Supermarkets', 'mckinnon'),
+    ('Dollar General',           'dollar general'),
+    ('Family Dollar',            'family dollar'),
     -- Whole Foods is NOT on Flipp; it's collected from its own API by the
     -- wholefoods.py collector. The unusual match_key never matches a Flipp
     -- merchant, so toggling this row only controls the Whole Foods collector.

@@ -44,8 +44,27 @@ The `schedule` command refreshes deals **daily** and runs admin-queued
 **Setup:** apply the grocery schema + seed once:
 ```bash
 # from scraper/, venv active, with SUPABASE_DB_PASSWORD set
-python scripts/init_db.py --file grocery_schema.sql --file grocery_seed.sql
+python scripts/init_db.py --file grocery_schema.sql --file grocery_v2.sql --file grocery_seed.sql
 ```
+
+### Automatic refresh in the cloud (no PC needed) ⭐
+A GitHub Actions workflow (`.github/workflows/refresh.yml`) refreshes deals
+**daily in the cloud** — your computer doesn't need to be on. It runs the slim
+`scripts/refresh_grocery.py` (Flipp + Whole Foods only, no browser deps).
+
+**One-time setup:** in the GitHub repo, go to **Settings → Secrets and variables
+→ Actions → New repository secret** and add:
+- `SUPABASE_SERVICE_ROLE_KEY` = your Supabase service-role key
+
+That's it — it then runs itself daily, and you can hit **Run workflow** in the
+**Actions** tab to refresh on demand. (The local `schedule` command still works
+too, but you no longer need it.)
+
+### Data quality (automatic)
+Every deal is auto-enriched at collection time: a **category** (Produce, Dairy,
+Meat, Pantry, …), a **unit** (`/lb`, `each`), and an **`is_grocery`** flag that
+hides non-food flyer items (TVs, furniture). Expired deals are auto-pruned each
+run. The dashboard filters by category and shows "Updated X ago".
 
 **Store coverage:**
 - **Flipp** (weekly flyers): Hannaford, Shaw's, Walmart, Costco, Market Basket, Aldi.

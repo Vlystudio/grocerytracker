@@ -26,6 +26,7 @@ import requests
 from ..config import settings
 from ..db import Database
 from ..logging_conf import get_logger
+from .enrich import categorize, parse_unit
 
 log = get_logger(__name__)
 
@@ -96,14 +97,19 @@ def _normalize(promo: dict[str, Any]) -> dict[str, Any]:
         parts.append(f"Sale {sale}")
     discount = " / ".join(parts) or (promo.get("headline") or None)
 
+    brand = promo.get("originBrandName") or None
+    category, is_grocery = categorize(name, brand)
     return {
         "flipp_item_id": None,
         "store": STORE_LABEL,
         "merchant_raw": "Whole Foods Market",
         "product_name": name,
-        "brand": (promo.get("originBrandName") or None),
+        "brand": brand,
         "price": _parse_price(prime, sale),   # advertised (Prime) price first
         "discount": discount,
+        "category": category,
+        "unit": parse_unit(prime, sale),
+        "is_grocery": is_grocery,
         "valid_from": promo.get("startDate"),
         "valid_to": promo.get("endDate"),
         "image_url": promo.get("productImage"),

@@ -76,6 +76,9 @@ export type GroceryDeal = {
   brand: string | null;
   price: number | null;
   discount: string | null;
+  category: string | null;
+  unit: string | null;
+  is_grocery: boolean;
   valid_from: string | null;
   valid_to: string | null;
   image_url: string | null;

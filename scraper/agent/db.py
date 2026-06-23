@@ -7,7 +7,7 @@ place that talks to Supabase, which keeps the rest of the code testable.
 from __future__ import annotations
 
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from supabase import Client, create_client
@@ -120,6 +120,18 @@ class Database:
         res = (
             self.client.table("grocery_deals")
             .upsert(rows, on_conflict="flipp_item_id", ignore_duplicates=True)
+            .execute()
+        )
+        return len(res.data or [])
+
+    def delete_expired_deals(self, grace_days: int = 2) -> int:
+        """Remove deals whose validity ended more than `grace_days` ago, so the
+        table stays clean/accurate automatically. Returns rows removed."""
+        cutoff = (datetime.utcnow() - timedelta(days=grace_days)).isoformat()
+        res = (
+            self.client.table("grocery_deals")
+            .delete()
+            .lt("valid_to", cutoff)
             .execute()
         )
         return len(res.data or [])

@@ -1,0 +1,40 @@
+name: Refresh grocery deals
+
+# Runs in the cloud on a schedule — your PC does NOT need to be on.
+on:
+  schedule:
+    # Daily at 09:00 UTC (~5am ET). Flyers update weekly, so daily is plenty.
+    - cron: "0 9 * * *"
+  workflow_dispatch: {}   # adds a manual "Run workflow" button in the Actions tab
+
+# Don't let two refreshes overlap.
+concurrency:
+  group: grocery-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Public project URL is safe to hardcode; only the key is a secret.
+      SUPABASE_URL: https://iwtngnmsdotumalpsfmv.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      AI_PROVIDER: none
+      WFM_STORE_ID: "10291"        # Whole Foods Portland, ME
+      WFM_POSTAL_CODE: "04101"
+      DEFAULT_RATE_LIMIT: "1.5"    # polite delay between requests (seconds)
+      LOG_DIR: logs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install collector dependencies (slim)
+        run: pip install -r scraper/requirements-collect.txt
+
+      - name: Refresh deals into Supabase
+        run: python scraper/scripts/refresh_grocery.py

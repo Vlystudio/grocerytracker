@@ -18,6 +18,7 @@ import requests
 from ..config import settings
 from ..db import Database
 from ..logging_conf import get_logger
+from .enrich import categorize, parse_unit
 
 log = get_logger(__name__)
 
@@ -69,14 +70,20 @@ def _to_price(value: Any) -> Optional[float]:
 
 
 def _normalize(item: dict[str, Any], store: str, merchant_raw: str, postal_code: str) -> dict[str, Any]:
+    name = (item.get("name") or "").strip() or "(unnamed item)"
+    brand = item.get("brand") or None
+    category, is_grocery = categorize(name, brand)
     return {
         "flipp_item_id": item.get("id"),
         "store": store,
         "merchant_raw": merchant_raw,
-        "product_name": (item.get("name") or "").strip() or "(unnamed item)",
-        "brand": (item.get("brand") or None),
+        "product_name": name,
+        "brand": brand,
         "price": _to_price(item.get("price")),
         "discount": (item.get("discount") or None),
+        "category": category,
+        "unit": parse_unit(name),
+        "is_grocery": is_grocery,
         "valid_from": item.get("valid_from"),
         "valid_to": item.get("valid_to"),
         "image_url": item.get("cutout_image_url"),
