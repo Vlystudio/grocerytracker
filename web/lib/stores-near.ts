@@ -21,33 +21,41 @@ async function trackedStores(): Promise<StoreKey[]> {
   return (data ?? []) as StoreKey[];
 }
 
-/** Display names of tracked stores available near `zip` (empty array on failure). */
+/** Display names of tracked stores available near `zip`.
+ *  Returns [] on a transient Flipp failure (caller should then show all stores).
+ *  Only successful lookups are cached, so a one-off failure can't get stuck. */
 export async function storesNearZip(zip: string): Promise<string[]> {
   const cached = cache.get(zip);
   if (cached && Date.now() - cached.at < TTL_MS) return cached.stores;
 
-  const found = new Set<string>();
+  let merchants: string[] | null = null;
   try {
     const res = await fetch(
       `https://backflipp.wishabi.com/flipp/flyers?postal_code=${encodeURIComponent(zip)}&locale=en-us`,
-      { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" }
+      { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store", signal: AbortSignal.timeout(7000) }
     );
-    const data = await res.json();
-    const merchants: string[] = (data.flyers ?? []).map((f: { merchant?: string }) =>
-      (f.merchant ?? "").toLowerCase()
-    );
-    const keys = await trackedStores();
-    for (const m of merchants) {
-      for (const k of keys) {
-        if (k.match_key && k.match_key !== "wholefoods-api" && m.includes(k.match_key)) {
-          found.add(k.display_name);
-        }
-      }
+    if (res.ok) {
+      const data = await res.json();
+      merchants = (data.flyers ?? []).map((f: { merchant?: string }) =>
+        (f.merchant ?? "").toLowerCase()
+      );
     }
   } catch {
-    // network/parse failure -> return whatever we have (likely empty)
+    merchants = null; // timeout / network / parse failure
   }
 
+  // Couldn't reach Flipp — return empty WITHOUT caching so the next call retries.
+  if (merchants === null) return [];
+
+  const found = new Set<string>();
+  const keys = await trackedStores();
+  for (const m of merchants) {
+    for (const k of keys) {
+      if (k.match_key && k.match_key !== "wholefoods-api" && m.includes(k.match_key)) {
+        found.add(k.display_name);
+      }
+    }
+  }
   // Whole Foods isn't on Flipp; it has one Maine store (Portland). Include it
   // for the greater-Portland / southern-Maine ZIP range.
   if (/^04(0|1)\d{2}$/.test(zip)) found.add("Whole Foods");
