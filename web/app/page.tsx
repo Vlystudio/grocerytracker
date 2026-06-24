@@ -15,7 +15,20 @@ function timeAgo(iso: string | null): string {
   if (mins < 60) return `${mins} min ago`;
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs} hr ago`;
-  return `${Math.round(hrs / 24)} day(s) ago`;
+  return `${Math.round(hrs / 24)} day${hrs >= 48 ? "s" : ""} ago`;
+}
+
+// Build a "/" URL from the current params plus overrides (undefined clears).
+function qs(
+  base: Record<string, string | undefined>,
+  override: Record<string, string | undefined>
+): string {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries({ ...base, ...override })) {
+    if (v) p.set(k, v);
+  }
+  const s = p.toString();
+  return s ? `/?${s}` : "/";
 }
 
 export default async function HomePage({
@@ -59,76 +72,101 @@ export default async function HomePage({
     supabase.from("v_last_refresh").select("last_refresh").maybeSingle(),
   ]);
 
-  return (
-    <div>
-      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold">Grocery deals</h1>
-        <span className="text-xs text-slate-400">
-          Updated {timeAgo(lastRefresh?.last_refresh ?? null)}
-        </span>
-      </div>
-      <p className="mb-4 text-sm text-slate-500">
-        This week&apos;s flyer deals across your Maine stores, refreshed automatically.
-      </p>
+  const cats = (categories ?? []) as { category: string; deal_count: number }[];
+  const storeList = (stores ?? []) as { store: string; deal_count: number }[];
+  const totalDeals = cats.reduce((n, c) => n + c.deal_count, 0);
 
-      {/* Filters (server-rendered GET form) */}
-      <form method="get" className="card mb-6 grid gap-3 md:grid-cols-12">
-        <div className="md:col-span-4">
-          <label className="label" htmlFor="q">Search product</label>
+  return (
+    <div className="space-y-6">
+      {/* Heading + freshness */}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Grocery deals</h1>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-900 px-2.5 py-1 text-xs text-slate-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Updated {timeAgo(lastRefresh?.last_refresh ?? null)}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-slate-400">
+          {totalDeals.toLocaleString()} deals on sale across {storeList.length} stores — refreshed automatically.
+        </p>
+      </div>
+
+      {/* Category quick-filters */}
+      <div className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto pb-1 sm:flex-wrap">
+        <a href={qs(sp, { category: undefined })} className={`chip ${!sp.category ? "chip-active" : ""}`}>
+          All
+        </a>
+        {cats.map((c) => (
+          <a
+            key={c.category}
+            href={qs(sp, { category: c.category })}
+            className={`chip whitespace-nowrap ${sp.category === c.category ? "chip-active" : ""}`}
+          >
+            {c.category}
+            <span className="ml-1.5 text-xs text-slate-500">{c.deal_count}</span>
+          </a>
+        ))}
+      </div>
+
+      {/* Toolbar */}
+      <form method="get" className="card grid gap-3 sm:grid-cols-12">
+        {/* keep the active category chip when submitting the toolbar */}
+        <input type="hidden" name="category" value={sp.category ?? ""} />
+        <div className="sm:col-span-5">
+          <label className="label" htmlFor="q">Search</label>
           <input id="q" name="q" defaultValue={sp.q ?? ""} placeholder="milk, chicken, coffee…" className="input" />
         </div>
-        <div className="md:col-span-2">
-          <label className="label" htmlFor="category">Category</label>
-          <select id="category" name="category" defaultValue={sp.category ?? ""} className="input">
-            <option value="">All</option>
-            {(categories ?? []).map((c: { category: string; deal_count: number }) => (
-              <option key={c.category} value={c.category}>{c.category} ({c.deal_count})</option>
-            ))}
-          </select>
-        </div>
-        <div className="md:col-span-2">
+        <div className="sm:col-span-3">
           <label className="label" htmlFor="store">Store</label>
           <select id="store" name="store" defaultValue={sp.store ?? ""} className="input">
             <option value="">All stores</option>
-            {(stores ?? []).map((s: { store: string; deal_count: number }) => (
+            {storeList.map((s) => (
               <option key={s.store} value={s.store}>{s.store} ({s.deal_count})</option>
             ))}
           </select>
         </div>
-        <div className="md:col-span-2">
+        <div className="sm:col-span-2">
           <label className="label" htmlFor="sort">Sort</label>
           <select id="sort" name="sort" defaultValue={sort} className="input">
-            <option value="price_asc">Price: low to high</option>
-            <option value="price_desc">Price: high to low</option>
+            <option value="price_asc">Price ↑</option>
+            <option value="price_desc">Price ↓</option>
             <option value="newest">Newest</option>
           </select>
         </div>
-        <div className="md:col-span-2">
+        <div className="sm:col-span-2">
           <label className="label" htmlFor="show">Show</label>
           <select id="show" name="show" defaultValue={sp.show ?? "current"} className="input">
-            <option value="current">Current only</option>
-            <option value="all">Include expired</option>
+            <option value="current">Current</option>
+            <option value="all">Incl. expired</option>
           </select>
         </div>
-        <div className="flex items-end gap-2 md:col-span-12">
-          <button type="submit" className="btn">Apply</button>
+        <div className="flex items-end gap-2 sm:col-span-12">
+          <button type="submit" className="btn">Apply filters</button>
           <a href="/" className="btn-secondary">Reset</a>
         </div>
       </form>
 
-      <p className="mb-3 text-sm text-slate-500">
-        {deals?.length ?? 0} deal{deals?.length === 1 ? "" : "s"}
-        {deals?.length === PAGE_SIZE ? " (showing first 120)" : ""}
-      </p>
-
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {(deals as GroceryDeal[] | null)?.map((d) => (
-          <DealCard key={d.id} deal={d} />
-        ))}
+      {/* Results */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-400">
+          {deals?.length ?? 0} result{deals?.length === 1 ? "" : "s"}
+          {deals?.length === PAGE_SIZE ? " (first 120)" : ""}
+          {sp.category ? ` in ${sp.category}` : ""}
+        </p>
       </div>
 
-      {(!deals || deals.length === 0) && (
-        <p className="text-slate-500">No deals match your filters.</p>
+      {deals && deals.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {(deals as GroceryDeal[]).map((d) => (
+            <DealCard key={d.id} deal={d} />
+          ))}
+        </div>
+      ) : (
+        <div className="card grid place-items-center py-16 text-center text-slate-400">
+          <p className="text-lg">No deals match your filters.</p>
+          <a href="/" className="btn-secondary mt-4">Clear filters</a>
+        </div>
       )}
     </div>
   );

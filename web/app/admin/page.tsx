@@ -17,11 +17,11 @@ import type {
 export const dynamic = "force-dynamic";
 
 const statusColor: Record<string, string> = {
-  queued: "bg-amber-100 text-amber-800",
-  running: "bg-blue-100 text-blue-800",
-  success: "bg-green-100 text-green-800",
-  partial: "bg-yellow-100 text-yellow-800",
-  failed: "bg-red-100 text-red-800",
+  queued: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  running: "bg-blue-500/15 text-blue-300 border-blue-500/30",
+  success: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  partial: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
+  failed: "bg-rose-500/15 text-rose-300 border-rose-500/30",
 };
 
 export default async function AdminPage() {
@@ -88,7 +88,7 @@ export default async function AdminPage() {
               <input type="hidden" name="id" value={s.id} />
               <input type="hidden" name="enabled" value={(!s.enabled).toString()} />
               <span className="font-medium">{s.display_name}</span>
-              <button className={`text-sm ${s.enabled ? "text-emerald-700" : "text-slate-400"}`}>
+              <button className={`text-sm ${s.enabled ? "text-emerald-400" : "text-slate-400"}`}>
                 {s.enabled ? "● enabled" : "○ disabled"}
               </button>
             </form>
@@ -111,7 +111,7 @@ export default async function AdminPage() {
               <input type="hidden" name="id" value={l.id} />
               <input type="hidden" name="enabled" value={(!l.enabled).toString()} />
               <span className="text-sm">{l.name}<br /><span className="text-xs text-slate-400">{l.postal_code}</span></span>
-              <button className={`text-sm ${l.enabled ? "text-emerald-700" : "text-slate-400"}`} title="toggle">
+              <button className={`text-sm ${l.enabled ? "text-emerald-400" : "text-slate-400"}`} title="toggle">
                 {l.enabled ? "●" : "○"}
               </button>
             </form>
@@ -137,7 +137,7 @@ export default async function AdminPage() {
             </thead>
             <tbody>
               {((runs as ScrapeRun[]) ?? []).map((run) => (
-                <tr key={run.id} className="border-t border-slate-100">
+                <tr key={run.id} className="border-t border-slate-800">
                   <td className="py-1 pr-4">{new Date(run.created_at).toLocaleString()}</td>
                   <td className="py-1 pr-4">{run.trigger}</td>
                   <td className="py-1 pr-4">
@@ -172,7 +172,7 @@ export default async function AdminPage() {
             </thead>
             <tbody>
               {((errors as ScrapeError[]) ?? []).map((err) => (
-                <tr key={err.id} className="border-t border-slate-100 align-top">
+                <tr key={err.id} className="border-t border-slate-800 align-top">
                   <td className="py-1 pr-4 whitespace-nowrap">{new Date(err.occurred_at).toLocaleString()}</td>
                   <td className="py-1 pr-4">{err.error_type}</td>
                   <td className="py-1 pr-4 max-w-xs truncate" title={err.url ?? ""}>{err.url}</td>

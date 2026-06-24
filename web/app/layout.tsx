@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Research Dashboard",
-  description: "Searchable scientific research aggregated by a local agent.",
+  title: "Grocery Deals — Maine",
+  description: "This week's grocery flyer deals across Maine stores, in one place.",
 };
 
 export default function RootLayout({
@@ -15,24 +16,27 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <header className="border-b border-slate-200 bg-white">
+        <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <Link href="/" className="text-lg font-semibold">
-              🛒 Grocery Deals
+            <Link href="/" className="flex items-center gap-2 font-semibold">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-lg ring-1 ring-emerald-500/30">
+                🛒
+              </span>
+              <span className="text-base">
+                Grocery&nbsp;Deals
+                <span className="ml-1.5 hidden text-xs font-normal text-slate-500 sm:inline">
+                  Maine
+                </span>
+              </span>
             </Link>
-            <nav className="flex gap-4 text-sm">
-              <Link href="/" className="hover:underline">
-                Deals
-              </Link>
-              <Link href="/admin" className="hover:underline">
-                Admin
-              </Link>
-            </nav>
+            <NavBar />
           </div>
         </header>
+
         <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
-        <footer className="mx-auto max-w-6xl px-4 py-8 text-xs text-slate-400">
-          Data scraped locally · Website reads from Supabase only.
+
+        <footer className="mx-auto max-w-6xl px-4 py-10 text-xs text-slate-600">
+          Weekly flyer deals, refreshed automatically · prices from store circulars.
         </footer>
       </body>
     </html>
