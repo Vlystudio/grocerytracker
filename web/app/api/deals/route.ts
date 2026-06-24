@@ -9,6 +9,8 @@
 // is already public (Supabase RLS allows anon SELECT on grocery_deals).
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { resolveLocation } from "@/lib/maine";
+import { storesNearZip } from "@/lib/stores-near";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +40,7 @@ export async function GET(req: NextRequest) {
   const store = sp.get("store")?.trim() || null;
   const category = sp.get("category")?.trim() || null;
   const zip = sp.get("zip")?.trim() || null;
+  const near = sp.get("near")?.trim() || null; // ZIP or Maine town -> nearby stores
   const sort = sp.get("sort") ?? "price_asc";
   const includeExpired = sp.get("include_expired") === "true";
   const includeUnpriced = sp.get("include_unpriced") === "true";
@@ -56,6 +59,19 @@ export async function GET(req: NextRequest) {
   if (!includeNongrocery) query = query.eq("is_grocery", true);
   if (!includeExpired) query = query.gte("valid_to", new Date().toISOString());
   if (!includeUnpriced) query = query.not("price", "is", null);
+
+  // "near" = a Maine ZIP or town -> limit to stores that serve that area.
+  let nearStores: string[] | null = null;
+  if (near) {
+    const loc = resolveLocation(near);
+    if (loc) {
+      const s = await storesNearZip(loc.zip);
+      if (s.length) {
+        nearStores = s;
+        query = query.in("store", s);
+      }
+    }
+  }
 
   if (q) query = query.ilike("product_name", `%${q.replace(/[%,]/g, " ")}%`);
   if (store) query = query.ilike("store", `%${store}%`);
@@ -88,7 +104,12 @@ export async function GET(req: NextRequest) {
   }));
 
   return NextResponse.json(
-    { query: { q, store, category, zip, sort }, count: deals.length, deals },
+    {
+      query: { q, store, category, near, zip, sort },
+      stores_near: nearStores,
+      count: deals.length,
+      deals,
+    },
     { headers: CORS }
   );
 }

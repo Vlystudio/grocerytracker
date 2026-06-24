@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { resolveLocation } from "@/lib/maine";
+import { storesNearZip } from "@/lib/stores-near";
 import DealCard from "@/components/DealCard";
 import type { GroceryDeal } from "@/lib/types";
 
@@ -18,7 +20,6 @@ function timeAgo(iso: string | null): string {
   return `${Math.round(hrs / 24)} day${hrs >= 48 ? "s" : ""} ago`;
 }
 
-// Build a "/" URL from the current params plus overrides (undefined clears).
 function qs(
   base: Record<string, string | undefined>,
   override: Record<string, string | undefined>
@@ -42,7 +43,23 @@ export default async function HomePage({
   const sort = sp.sort ?? "price_asc";
   const showAll = sp.show === "all";
 
-  // Grocery-only by default (hides electronics/furniture/etc.).
+  // --- Location: resolve "near" to a ZIP, then to the stores serving it ---
+  const near = sp.near?.trim() ?? "";
+  let nearStores: string[] | null = null;
+  let nearLabel: string | null = null;
+  let nearError: string | null = null;
+  if (near) {
+    const loc = resolveLocation(near);
+    if (!loc) {
+      nearError = `Couldn't find "${near}" in Maine — try a ZIP like 04101 or a town like Augusta.`;
+    } else {
+      nearLabel = loc.label;
+      const s = await storesNearZip(loc.zip);
+      nearStores = s.length > 0 ? s : null;
+      if (!nearStores) nearError = `Couldn't load stores near ${loc.label}; showing all stores.`;
+    }
+  }
+
   let query = supabase
     .from("grocery_deals")
     .select("*")
@@ -50,6 +67,7 @@ export default async function HomePage({
     .limit(PAGE_SIZE);
 
   if (!showAll) query = query.gte("valid_to", new Date().toISOString());
+  if (nearStores) query = query.in("store", nearStores); // limit to nearby stores
   if (sp.store) query = query.eq("store", sp.store);
   if (sp.category) query = query.eq("category", sp.category);
   if (sp.q) query = query.ilike("product_name", `%${sp.q.replace(/[%,]/g, " ")}%`);
@@ -73,7 +91,8 @@ export default async function HomePage({
   ]);
 
   const cats = (categories ?? []) as { category: string; deal_count: number }[];
-  const storeList = (stores ?? []) as { store: string; deal_count: number }[];
+  let storeList = (stores ?? []) as { store: string; deal_count: number }[];
+  if (nearStores) storeList = storeList.filter((s) => nearStores!.includes(s.store));
   const totalDeals = cats.reduce((n, c) => n + c.deal_count, 0);
 
   return (
@@ -88,9 +107,37 @@ export default async function HomePage({
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-400">
-          {totalDeals.toLocaleString()} deals on sale across {storeList.length} stores — refreshed automatically.
+          {totalDeals.toLocaleString()} deals on sale across Maine stores — refreshed automatically.
         </p>
       </div>
+
+      {/* Location bar */}
+      <form method="get" className="card border-emerald-500/20">
+        {(["q", "category", "store", "sort", "show"] as const).map((k) =>
+          sp[k] ? <input key={k} type="hidden" name={k} value={sp[k]} /> : null
+        )}
+        <label className="label" htmlFor="near">📍 Find deals near you (Maine)</label>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            id="near"
+            name="near"
+            defaultValue={near}
+            placeholder="Enter your ZIP code or town — e.g. 04330 or Augusta"
+            className="input sm:flex-1"
+          />
+          <button type="submit" className="btn whitespace-nowrap">Find nearby deals</button>
+          {near && (
+            <a href={qs(sp, { near: undefined })} className="btn-secondary">Clear</a>
+          )}
+        </div>
+        {nearError && <p className="mt-2 text-sm text-amber-300">{nearError}</p>}
+        {nearLabel && nearStores && (
+          <p className="mt-2 text-sm text-slate-300">
+            <span className="font-semibold text-emerald-300">{nearStores.length} stores</span>{" "}
+            near {nearLabel}: <span className="text-slate-400">{nearStores.join(", ")}</span>
+          </p>
+        )}
+      </form>
 
       {/* Category quick-filters */}
       <div className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto pb-1 sm:flex-wrap">
@@ -111,8 +158,8 @@ export default async function HomePage({
 
       {/* Toolbar */}
       <form method="get" className="card grid gap-3 sm:grid-cols-12">
-        {/* keep the active category chip when submitting the toolbar */}
         <input type="hidden" name="category" value={sp.category ?? ""} />
+        {near && <input type="hidden" name="near" value={near} />}
         <div className="sm:col-span-5">
           <label className="label" htmlFor="q">Search</label>
           <input id="q" name="q" defaultValue={sp.q ?? ""} placeholder="milk, chicken, coffee…" className="input" />
@@ -120,7 +167,7 @@ export default async function HomePage({
         <div className="sm:col-span-3">
           <label className="label" htmlFor="store">Store</label>
           <select id="store" name="store" defaultValue={sp.store ?? ""} className="input">
-            <option value="">All stores</option>
+            <option value="">{nearStores ? "All nearby stores" : "All stores"}</option>
             {storeList.map((s) => (
               <option key={s.store} value={s.store}>{s.store} ({s.deal_count})</option>
             ))}
@@ -143,18 +190,17 @@ export default async function HomePage({
         </div>
         <div className="flex items-end gap-2 sm:col-span-12">
           <button type="submit" className="btn">Apply filters</button>
-          <a href="/" className="btn-secondary">Reset</a>
+          <a href={near ? qs({}, { near }) : "/"} className="btn-secondary">Reset</a>
         </div>
       </form>
 
       {/* Results */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400">
-          {deals?.length ?? 0} result{deals?.length === 1 ? "" : "s"}
-          {deals?.length === PAGE_SIZE ? " (first 120)" : ""}
-          {sp.category ? ` in ${sp.category}` : ""}
-        </p>
-      </div>
+      <p className="text-sm text-slate-400">
+        {deals?.length ?? 0} result{deals?.length === 1 ? "" : "s"}
+        {deals?.length === PAGE_SIZE ? " (first 120)" : ""}
+        {sp.category ? ` in ${sp.category}` : ""}
+        {nearLabel ? ` near ${nearLabel}` : ""}
+      </p>
 
       {deals && deals.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
